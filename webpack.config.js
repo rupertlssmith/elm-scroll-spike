@@ -117,40 +117,7 @@ if (isDev) {
       inline: true,
       stats: 'errors-only',
       port: 9071,
-      disableHostCheck: true,
-      historyApiFallback: {
-        disableDotRule: true
-      },
-
-      // A simple server to list and serve AWS API specs.
-      before: function(app, server, compiler) {
-
-        // List all the available AWS API specs.
-        app.get('/awsspec', function(req, res) {
-          var result = [];
-          glob("api/*.normal.json", function(er, files) {
-            files.forEach(function(file) {
-              var filename = file.slice('api/'.length);
-              result.push(filename);
-            });
-            res.json({
-              specs: result
-            });
-          });
-        });
-
-        // Fetch a requested API spec.
-        app.get('/awsspec/:spec', function(req, res) {
-
-          var filename = 'api/' + req.params.spec;
-
-          fs.readFile(filename, 'utf8', function(err, contents) {
-            res.type('application/json');
-            res.send(contents);
-          });
-        });
-
-      }
+      disableHostCheck: true
     }
   });
 }
@@ -182,15 +149,6 @@ if (isProd) {
         filename: 'static/css/[name]-[hash].css',
         allChunks: true
       }),
-
-      new CopyWebpackPlugin([{
-          from: 'src/static/img',
-          to: 'static/img'
-        },
-        {
-          from: 'src/static/favicon.ico'
-        }
-      ]),
 
       new UglifyJsPlugin(),
 
