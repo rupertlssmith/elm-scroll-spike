@@ -45,6 +45,10 @@ type Msg
 
 
 update msg model =
+    let
+        _ =
+            Debug.log "update" msg
+    in
     ( model, Cmd.none )
 
 
@@ -240,6 +244,8 @@ viewChar buffer row col char =
 type alias ScrollEvent =
     { scrollTop : Maybe Float
     , scrollHeight : Maybe Float
+    , scrollLeft : Maybe Float
+    , scrollWidth : Maybe Float
     }
 
 
@@ -248,6 +254,8 @@ scrollDecoder =
     Decode.succeed ScrollEvent
         |> andMap (Decode.at [ "target", "scrollTop" ] Decode.float |> Decode.maybe)
         |> andMap (Decode.at [ "target", "scrollHeight" ] Decode.float |> Decode.maybe)
+        |> andMap (Decode.at [ "target", "scrollLeft" ] Decode.float |> Decode.maybe)
+        |> andMap (Decode.at [ "target", "scrollWidth" ] Decode.float |> Decode.maybe)
         |> Decode.map Scroll
 
 
