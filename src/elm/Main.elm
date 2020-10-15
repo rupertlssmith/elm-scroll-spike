@@ -50,7 +50,7 @@ type Msg
 
 
 update msg model =
-    case Debug.log "update" msg of
+    case msg of
         RandomBuffer buffer ->
             ( { model | buffer = buffer }, Cmd.none )
 
@@ -281,11 +281,9 @@ randomBuffer width length =
                 |> List.map (.match >> String.toLower)
                 |> Array.fromList
 
-        wordGenerator : Generator (Maybe String)
         wordGenerator =
             Random.Array.sample wordList
 
-        line : Int -> List String -> Generator (Maybe String) -> Generator String
         line curLength curLine generator =
             if curLength >= width then
                 String.concat curLine
@@ -305,12 +303,9 @@ randomBuffer width length =
                                         ((val ++ " ") :: curLine)
                                         generator
                         )
-
-        lines =
-            line 0 [] wordGenerator
-                |> Random.Array.array length
     in
-    lines
+    line 0 [] wordGenerator
+        |> Random.Array.array length
 
 
 lorumIpsum : String
