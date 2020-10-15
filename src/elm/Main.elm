@@ -11,7 +11,9 @@ import Html.Events as HE
 import Html.Lazy
 import Html.Styled
 import Json.Decode as Decode exposing (Decoder)
-import Task
+import Random exposing (Generator, Seed)
+import Regex exposing (Regex)
+import Task exposing (Task)
 
 
 main : Program () Model Msg
@@ -35,21 +37,23 @@ type alias RowCol =
 
 
 init _ =
-    ( { buffer = Array.fromList [ "one", "two", "three", "four", "five" ] }
-    , Cmd.none
+    ( { buffer = Array.empty }
+    , Task.perform RandomBuffer (randomBuffer 0 0)
     )
 
 
 type Msg
     = Scroll ScrollEvent
+    | RandomBuffer (Array String)
 
 
 update msg model =
-    let
-        _ =
-            Debug.log "update" msg
-    in
-    ( model, Cmd.none )
+    case Debug.log "update" msg of
+        RandomBuffer buffer ->
+            ( { model | buffer = buffer }, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 subscriptions _ =
@@ -274,3 +278,33 @@ indexedFoldl fn accum buffer =
         ( 0, accum )
         buffer
         |> Tuple.second
+
+
+randomBuffer : Int -> Int -> Task Never (Array String)
+randomBuffer width length =
+    let
+        regex =
+            Regex.fromString "(\\b[^\\s]+\\b)"
+                |> Maybe.withDefault Regex.never
+    in
+    Regex.find regex lorumIpsum
+        |> List.map (.match >> String.toLower)
+        |> Array.fromList
+        |> Task.succeed
+
+
+lorumIpsum : String
+lorumIpsum =
+    """
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras ut feugiat orci. Ut cursus malesuada nunc id tempor. Nam dignissim luctus mi ac vestibulum. Fusce fermentum purus quis rutrum facilisis. Sed ut justo ac nulla ornare dictum. Ut condimentum pellentesque volutpat. Aliquam sapien eros, ornare eget nisi porta, mattis lobortis mauris. In hac habitasse platea dictumst. Aliquam scelerisque risus sed luctus accumsan.
+
+Mauris posuere pellentesque urna, in consectetur enim tempor volutpat. Nulla convallis, turpis nec convallis eleifend, nisi elit vulputate nibh, nec cursus tellus purus eu mauris. Nulla facilisi. Ut placerat vulputate pharetra. Etiam libero est, eleifend quis semper ac, fringilla vitae arcu. Quisque ut cursus leo. Suspendisse augue tortor, venenatis at ex sit amet, fringilla malesuada ligula. Phasellus nulla nibh, mollis ut vulputate quis, congue vitae mi. Nunc porta, ex quis luctus scelerisque, eros mauris placerat mauris, vitae finibus leo nulla in lacus. Donec ac ex leo. Aliquam ut quam tincidunt, maximus neque et, hendrerit magna.
+
+Integer elementum leo lacinia risus pharetra, sit amet condimentum felis porta. Phasellus sollicitudin mauris at risus semper, in facilisis ex dictum. Vestibulum tincidunt eros a vehicula dignissim. Quisque a ex et arcu bibendum congue. Praesent gravida nulla metus, sed luctus justo fermentum et. Nullam scelerisque, felis tempor placerat eleifend, neque risus dictum nisi, eget ullamcorper massa mauris non metus. Nam rhoncus mollis justo, eu luctus arcu pharetra et. Aenean auctor et massa tempus consectetur. Duis tempus nunc volutpat dolor pellentesque, non imperdiet purus sagittis. Sed ultricies neque vel condimentum tincidunt. Suspendisse ornare sodales risus, sed tincidunt tortor rutrum sed. Suspendisse pellentesque quis quam vel elementum.
+
+Sed blandit orci ut lectus efficitur tempor. Maecenas vitae risus sodales leo fringilla posuere. Sed facilisis magna non eros porttitor, a molestie neque ultricies. Nulla ac sapien lacus. Aliquam erat volutpat. Etiam volutpat sem mauris, vitae luctus neque imperdiet non. Ut condimentum eget ipsum lobortis eleifend. Ut dignissim laoreet fringilla. Ut sit amet metus pharetra, malesuada diam vel, convallis ipsum.
+
+Integer ac pellentesque turpis, id placerat libero. Fusce commodo mauris vitae augue laoreet, id dignissim enim placerat. Suspendisse et tellus semper, dictum nibh quis, tempus est. Etiam sagittis non lectus eu dapibus. Nullam metus nunc, lacinia ut varius et, commodo quis metus. In vel efficitur nisl. Mauris ac mi sed dolor scelerisque vulputate. In gravida urna ut tempus tempor. Quisque pulvinar velit ac lacus gravida vulputate. Integer ante odio, ultricies a posuere ut, sollicitudin ut risus.
+
+Nullam volutpat consequat metus ac gravida. Curabitur iaculis nibh leo, non lacinia velit porta vitae. Aliquam convallis libero sed quam pharetra, eget cursus ex sagittis. Donec sodales in libero et finibus. Nunc rhoncus eleifend odio maximus sollicitudin. Fusce euismod erat quis enim cursus, eget imperdiet lectus rhoncus. Integer aliquet, nunc nec posuere condimentum, ex mauris fringilla urna, sit amet fermentum neque risus eu felis. Suspendisse tortor nibh, commodo et varius a, pulvinar vel urna. Nam porta aliquet egestas. Nam in fringilla ipsum. Praesent gravida nisl nec arcu pretium, pharetra vestibulum dolor placerat. Nullam rutrum in dolor ac mollis. Duis ornare laoreet enim.
+  """
