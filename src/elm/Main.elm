@@ -12,6 +12,7 @@ import Html.Lazy
 import Html.Styled
 import Json.Decode as Decode exposing (Decoder)
 import Random exposing (Generator, Seed)
+import Random.Array
 import Regex exposing (Regex)
 import Task exposing (Task)
 
@@ -38,7 +39,7 @@ type alias RowCol =
 
 init _ =
     ( { buffer = Array.empty }
-    , Task.perform RandomBuffer (randomBuffer 0 0)
+    , randomBuffer 120 500
     )
 
 
@@ -145,7 +146,7 @@ view model =
     { title = "Scroll Spike"
     , body =
         [ Css.Global.global global |> Html.Styled.toUnstyled
-        , Html.Lazy.lazy editorView model
+        , editorView model
         ]
     }
 
@@ -280,17 +281,49 @@ indexedFoldl fn accum buffer =
         |> Tuple.second
 
 
-randomBuffer : Int -> Int -> Task Never (Array String)
+randomBuffer : Int -> Int -> Cmd Msg
 randomBuffer width length =
     let
         regex =
             Regex.fromString "(\\b[^\\s]+\\b)"
                 |> Maybe.withDefault Regex.never
+
+        wordList =
+            Regex.find regex lorumIpsum
+                |> List.map (.match >> String.toLower)
+                |> Array.fromList
+
+        wordGenerator : Generator (Maybe String)
+        wordGenerator =
+            Random.Array.sample wordList
+
+        line : Int -> List String -> Generator (Maybe String) -> Generator String
+        line curLength curLine generator =
+            if curLength >= width then
+                String.concat curLine
+                    |> Random.constant
+
+            else
+                generator
+                    |> Random.andThen
+                        (\randomWord ->
+                            case randomWord of
+                                Nothing ->
+                                    -- This should not happen.
+                                    line curLength curLine generator
+
+                                Just val ->
+                                    line (curLength + String.length val + 1)
+                                        ((val ++ " ") :: curLine)
+                                        generator
+                        )
+
+        lines =
+            line 0 [] wordGenerator
+                |> Random.Array.array length
     in
-    Regex.find regex lorumIpsum
-        |> List.map (.match >> String.toLower)
-        |> Array.fromList
-        |> Task.succeed
+    lines
+        |> Random.generate RandomBuffer
 
 
 lorumIpsum : String
