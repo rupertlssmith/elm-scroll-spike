@@ -35,7 +35,7 @@ type alias RowCol =
 
 
 init _ =
-    ( { buffer = Array.fromList [ "one", "two", "three" ] }
+    ( { buffer = Array.fromList [ "one", "two", "three", "four", "five" ] }
     , Cmd.none
     )
 
