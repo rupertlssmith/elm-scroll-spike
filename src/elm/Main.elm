@@ -131,8 +131,6 @@ global =
         [ Css.position Css.absolute
         , Css.px 0 |> Css.left
         , Css.px 0 |> Css.right
-
-        --, Css.px lineHeight |> Css.height
         ]
     ]
 
@@ -197,7 +195,7 @@ viewLineNumbers model =
 
 viewLineNumber : Int -> Html Msg
 viewLineNumber n =
-    H.span [] [ H.text (String.fromInt n) ]
+    H.div [] [ H.text (String.fromInt n) ]
 
 
 viewContent : Model -> Html Msg
