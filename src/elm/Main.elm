@@ -80,14 +80,14 @@ global : List Css.Global.Snippet
 global =
     [ Css.Global.class "editor-main"
         [ Css.position Css.relative
-        , Css.px 800 |> Css.width
-        , Css.px 406 |> Css.height
+        , Css.fontFamily Css.monospace
+        , Css.whiteSpace Css.pre
+        , Css.overflowX Css.hidden
+        , Css.overflowY Css.hidden
         ]
     , Css.Global.class "editor-main-inner"
         [ Css.displayFlex
         , Css.flexDirection Css.row
-        , Css.fontFamily Css.monospace
-        , Css.whiteSpace Css.pre
         ]
     , Css.Global.class "content-main"
         [ Css.position Css.relative
@@ -106,7 +106,6 @@ global =
         ]
     , Css.Global.class "v-scroll-bar-inner"
         [ Css.px 1 |> Css.minWidth
-        , Css.px 775 |> Css.height
         ]
     , Css.Global.class "h-scroll-bar"
         [ Css.position Css.absolute
@@ -115,15 +114,14 @@ global =
         , Css.px 0 |> Css.left
         , Css.px 0 |> Css.right
         , Css.px 0 |> Css.bottom
-        , Css.int 5 |> Css.zIndex
+        , Css.int 1 |> Css.zIndex
         ]
     , Css.Global.class "h-scroll-bar-inner"
         [ Css.px 1 |> Css.minHeight
-        , Css.pct 100 |> Css.height
-        , Css.px 1600 |> Css.width
+        , Css.pct 1 |> Css.height
         ]
     , Css.Global.class "code-line-numbers"
-        [ Css.em 2 |> Css.width
+        [ Css.em 2 |> Css.minWidth
         , Css.textAlign Css.right
         , Css.displayFlex
         , Css.flexDirection Css.column
