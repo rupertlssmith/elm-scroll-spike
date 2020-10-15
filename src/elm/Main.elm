@@ -89,13 +89,6 @@ global =
         [ Css.displayFlex
         , Css.flexDirection Css.row
         ]
-    , Css.Global.class "content-main"
-        [ Css.position Css.relative
-        , Css.property "flex" "1"
-        , Css.property "user-select" "none"
-        , Css.em 1 |> Css.marginLeft
-        , Css.em 1 |> Css.marginRight
-        ]
     , Css.Global.class "v-scroll-bar"
         [ Css.position Css.absolute
         , Css.overflowX Css.hidden
@@ -127,11 +120,19 @@ global =
         , Css.flexDirection Css.column
         , Css.property "user-select" "none"
         ]
+    , Css.Global.class "content-main"
+        [ Css.position Css.relative
+        , Css.property "flex" "1"
+        , Css.property "user-select" "none"
+        , Css.em 1 |> Css.marginLeft
+        , Css.em 1 |> Css.marginRight
+        ]
     , Css.Global.class "content-line"
         [ Css.position Css.absolute
         , Css.px 0 |> Css.left
         , Css.px 0 |> Css.right
-        , Css.px lineHeight |> Css.height
+
+        --, Css.px lineHeight |> Css.height
         ]
     ]
 
@@ -224,21 +225,7 @@ viewLine buffer row content =
         [ HA.class "content-line"
         , HA.style "top" (String.fromFloat (toFloat row * lineHeight) ++ "px")
         ]
-        (viewChars buffer row content)
-
-
-viewChars : Array String -> Int -> String -> List (Html Msg)
-viewChars buffer row content =
-    content
-        |> String.toList
-        |> List.indexedMap (viewChar buffer row)
-
-
-viewChar : Array String -> Int -> Int -> Char -> Html Msg
-viewChar buffer row col char =
-    H.span
-        []
-        [ H.text (String.fromChar char) ]
+        [ H.text content ]
 
 
 
