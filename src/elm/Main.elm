@@ -15,6 +15,7 @@ import Random exposing (Generator, Seed)
 import Random.Array
 import Regex exposing (Regex)
 import Task exposing (Task)
+import Time
 
 
 main : Program () Model Msg
@@ -39,7 +40,7 @@ type alias RowCol =
 
 init _ =
     ( { buffer = Array.empty }
-    , randomBuffer 120 500
+    , Task.perform RandomBuffer (randomBuffer 120 500 |> randomToTask)
     )
 
 
@@ -264,24 +265,11 @@ scrollDecoder =
         |> Decode.map Scroll
 
 
-andMap : Decoder a -> Decoder (a -> b) -> Decoder b
-andMap =
-    Decode.map2 (|>)
+
+-- Random buffer initialization.
 
 
-
--- Helpers
-
-
-indexedFoldl : (Int -> String -> b -> b) -> b -> Array String -> b
-indexedFoldl fn accum buffer =
-    Array.foldl (\val ( idx, acc ) -> ( idx + 1, fn idx val acc ))
-        ( 0, accum )
-        buffer
-        |> Tuple.second
-
-
-randomBuffer : Int -> Int -> Cmd Msg
+randomBuffer : Int -> Int -> Generator (Array String)
 randomBuffer width length =
     let
         regex =
@@ -323,7 +311,6 @@ randomBuffer width length =
                 |> Random.Array.array length
     in
     lines
-        |> Random.generate RandomBuffer
 
 
 lorumIpsum : String
@@ -341,3 +328,26 @@ Integer ac pellentesque turpis, id placerat libero. Fusce commodo mauris vitae a
 
 Nullam volutpat consequat metus ac gravida. Curabitur iaculis nibh leo, non lacinia velit porta vitae. Aliquam convallis libero sed quam pharetra, eget cursus ex sagittis. Donec sodales in libero et finibus. Nunc rhoncus eleifend odio maximus sollicitudin. Fusce euismod erat quis enim cursus, eget imperdiet lectus rhoncus. Integer aliquet, nunc nec posuere condimentum, ex mauris fringilla urna, sit amet fermentum neque risus eu felis. Suspendisse tortor nibh, commodo et varius a, pulvinar vel urna. Nam porta aliquet egestas. Nam in fringilla ipsum. Praesent gravida nisl nec arcu pretium, pharetra vestibulum dolor placerat. Nullam rutrum in dolor ac mollis. Duis ornare laoreet enim.
   """
+
+
+
+-- Helpers
+
+
+indexedFoldl : (Int -> String -> b -> b) -> b -> Array String -> b
+indexedFoldl fn accum buffer =
+    Array.foldl (\val ( idx, acc ) -> ( idx + 1, fn idx val acc ))
+        ( 0, accum )
+        buffer
+        |> Tuple.second
+
+
+randomToTask : Generator a -> Task x a
+randomToTask generator =
+    Time.now
+        |> Task.map (Tuple.first << Random.step generator << Random.initialSeed << Time.posixToMillis)
+
+
+andMap : Decoder a -> Decoder (a -> b) -> Decoder b
+andMap =
+    Decode.map2 (|>)
