@@ -2,12 +2,13 @@ module Main exposing (main)
 
 import Array exposing (Array)
 import Browser exposing (Document)
-import Browser.Dom
+import Browser.Dom exposing (Viewport)
 import Css
 import Css.Global
 import Html as H exposing (Attribute, Html)
 import Html.Attributes as HA
 import Html.Events as HE
+import Html.Keyed as Keyed
 import Html.Lazy
 import Html.Styled
 import Json.Decode as Decode exposing (Decoder)
@@ -29,7 +30,10 @@ main =
 
 
 type alias Model =
-    { buffer : Array String }
+    { buffer : Array String
+    , top : Float
+    , height : Float
+    }
 
 
 type alias RowCol =
@@ -39,14 +43,21 @@ type alias RowCol =
 
 
 init _ =
-    ( { buffer = Array.empty }
-    , Task.perform RandomBuffer (randomBuffer 120 500 |> randomToTask)
+    ( { buffer = Array.empty
+      , top = 0
+      , height = 0
+      }
+    , Cmd.batch
+        [ Task.perform RandomBuffer (randomBuffer 120 500 |> randomToTask)
+        , Browser.Dom.getViewportOf "editor-main" |> Task.attempt ContentViewPort
+        ]
     )
 
 
 type Msg
     = Scroll ScrollEvent
     | RandomBuffer (Array String)
+    | ContentViewPort (Result Browser.Dom.Error Viewport)
 
 
 update msg model =
@@ -54,8 +65,16 @@ update msg model =
         RandomBuffer buffer ->
             ( { model | buffer = buffer }, Cmd.none )
 
-        _ ->
-            ( model, Cmd.none )
+        Scroll scroll ->
+            ( { model | top = scroll.scrollTop }, Cmd.none )
+
+        ContentViewPort result ->
+            case result of
+                Ok viewport ->
+                    ( { model | height = viewport.viewport.height }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 subscriptions _ =
@@ -78,16 +97,25 @@ lineHeight =
 
 global : List Css.Global.Snippet
 global =
-    [ Css.Global.class "editor-main"
+    [ Css.Global.html
+        [ Css.pct 100 |> Css.height ]
+    , Css.Global.body
+        [ Css.pct 100 |> Css.height ]
+    , Css.Global.id "editor-main"
         [ Css.position Css.relative
         , Css.fontFamily Css.monospace
         , Css.whiteSpace Css.pre
-        , Css.overflowX Css.hidden
-        , Css.overflowY Css.hidden
+        , Css.overflowX Css.scroll
+        , Css.overflowY Css.scroll
+        , Css.pct 100 |> Css.width
+        , Css.pct 100 |> Css.height
         ]
-    , Css.Global.class "editor-main-inner"
+    , Css.Global.id "editor-main-inner"
         [ Css.displayFlex
         , Css.flexDirection Css.row
+
+        -- , Css.overflowX Css.scroll
+        -- , Css.overflowY Css.scroll
         ]
     , Css.Global.class "v-scroll-bar"
         [ Css.position Css.absolute
@@ -120,7 +148,7 @@ global =
         , Css.flexDirection Css.column
         , Css.property "user-select" "none"
         ]
-    , Css.Global.class "content-main"
+    , Css.Global.id "content-main"
         [ Css.position Css.relative
         , Css.property "flex" "1"
         , Css.property "user-select" "none"
@@ -151,16 +179,19 @@ view model =
 
 editorView : Model -> Html Msg
 editorView model =
-    H.div [ HA.class "editor-main" ]
-        [ viewVScrollBar
-        , viewHScrollBar
-        , H.div
-            [ HA.class "editor-main-inner"
-            , HA.id "editor"
+    H.div
+        [ HA.id "editor-main"
+        , HE.on "scroll" scrollDecoder
+        ]
+        [ --  viewVScrollBar
+          -- , viewHScrollBar
+          -- ,
+          H.div
+            [ HA.id "editor-main-inner"
             , HA.tabindex 0
             ]
-            [ viewLineNumbers model
-            , viewContent model
+            [ -- viewLineNumbers model,
+              viewContent model
             ]
         ]
 
@@ -200,21 +231,58 @@ viewLineNumber n =
 
 viewContent : Model -> Html Msg
 viewContent model =
+    let
+        pad =
+            10
+
+        startLine =
+            max 0
+                ((model.top / lineHeight |> floor) - pad)
+
+        endLine =
+            ((model.top + model.height) / lineHeight |> floor) + pad
+
+        height =
+            (Array.length model.buffer |> toFloat) * lineHeight
+    in
     H.div
-        [ HA.class "content-main" ]
-        [ viewLines model.buffer ]
+        [ HA.id "content-main"
+        , HA.style "height" (String.fromFloat height ++ "px")
+        ]
+        --[ viewLines startLine endLine model.buffer ]
+        [ keyedViewLines startLine endLine model.buffer ]
 
 
-viewLines : Array String -> Html Msg
-viewLines buffer =
-    H.div []
-        (indexedFoldl
-            (\idx row accum ->
-                viewLine buffer idx row :: accum
+viewLines : Int -> Int -> Array String -> Html Msg
+viewLines start end buffer =
+    List.range start end
+        |> List.foldr
+            (\idx accum ->
+                case Array.get idx buffer of
+                    Nothing ->
+                        accum
+
+                    Just row ->
+                        viewLine buffer idx row :: accum
             )
             []
-            buffer
-        )
+        |> H.div []
+
+
+keyedViewLines : Int -> Int -> Array String -> Html Msg
+keyedViewLines start end buffer =
+    List.range start end
+        |> List.foldr
+            (\idx accum ->
+                case Array.get idx buffer of
+                    Nothing ->
+                        accum
+
+                    Just row ->
+                        viewKeyedLine buffer idx row :: accum
+            )
+            []
+        |> Keyed.node "div" []
 
 
 viewLine : Array String -> Int -> String -> Html Msg
@@ -226,25 +294,36 @@ viewLine buffer row content =
         [ H.text content ]
 
 
+viewKeyedLine : Array String -> Int -> String -> ( String, Html Msg )
+viewKeyedLine buffer row content =
+    ( String.fromInt row
+    , H.div
+        [ HA.class "content-line"
+        , HA.style "top" (String.fromFloat (toFloat row * lineHeight) ++ "px")
+        ]
+        [ H.text content ]
+    )
+
+
 
 -- Scroll events
 
 
 type alias ScrollEvent =
-    { scrollTop : Maybe Float
-    , scrollHeight : Maybe Float
-    , scrollLeft : Maybe Float
-    , scrollWidth : Maybe Float
+    { scrollTop : Float
+    , scrollHeight : Float
+    , scrollLeft : Float
+    , scrollWidth : Float
     }
 
 
 scrollDecoder : Decoder Msg
 scrollDecoder =
     Decode.succeed ScrollEvent
-        |> andMap (Decode.at [ "target", "scrollTop" ] Decode.float |> Decode.maybe)
-        |> andMap (Decode.at [ "target", "scrollHeight" ] Decode.float |> Decode.maybe)
-        |> andMap (Decode.at [ "target", "scrollLeft" ] Decode.float |> Decode.maybe)
-        |> andMap (Decode.at [ "target", "scrollWidth" ] Decode.float |> Decode.maybe)
+        |> andMap (Decode.at [ "target", "scrollTop" ] Decode.float)
+        |> andMap (Decode.at [ "target", "scrollHeight" ] Decode.float)
+        |> andMap (Decode.at [ "target", "scrollLeft" ] Decode.float)
+        |> andMap (Decode.at [ "target", "scrollWidth" ] Decode.float)
         |> Decode.map Scroll
 
 
