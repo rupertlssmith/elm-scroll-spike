@@ -49,7 +49,7 @@ init _ =
       , height = 0
       }
     , Cmd.batch
-        [ Task.perform RandomBuffer (randomBuffer 120 500 |> randomToTask)
+        [ Task.perform RandomBuffer (randomBuffer 120 10000 |> randomToTask)
         , initEditorSize
         ]
     )
