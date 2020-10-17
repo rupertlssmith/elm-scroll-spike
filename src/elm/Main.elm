@@ -49,9 +49,14 @@ init _ =
       }
     , Cmd.batch
         [ Task.perform RandomBuffer (randomBuffer 120 500 |> randomToTask)
-        , Browser.Dom.getViewportOf "editor-main" |> Task.attempt ContentViewPort
+        , initEditorSize
         ]
     )
+
+
+initEditorSize : Cmd Msg
+initEditorSize =
+    Browser.Dom.getViewportOf "editor-main" |> Task.attempt ContentViewPort
 
 
 type Msg
@@ -113,9 +118,6 @@ global =
     , Css.Global.id "editor-main-inner"
         [ Css.displayFlex
         , Css.flexDirection Css.row
-
-        -- , Css.overflowX Css.scroll
-        -- , Css.overflowY Css.scroll
         ]
     , Css.Global.class "v-scroll-bar"
         [ Css.position Css.absolute
@@ -183,15 +185,11 @@ editorView model =
         [ HA.id "editor-main"
         , HE.on "scroll" scrollDecoder
         ]
-        [ --  viewVScrollBar
-          -- , viewHScrollBar
-          -- ,
-          H.div
+        [ H.div
             [ HA.id "editor-main-inner"
             , HA.tabindex 0
             ]
-            [ -- viewLineNumbers model,
-              viewContent model
+            [ viewContent model
             ]
         ]
 
@@ -249,24 +247,7 @@ viewContent model =
         [ HA.id "content-main"
         , HA.style "height" (String.fromFloat height ++ "px")
         ]
-        --[ viewLines startLine endLine model.buffer ]
         [ keyedViewLines startLine endLine model.buffer ]
-
-
-viewLines : Int -> Int -> Array String -> Html Msg
-viewLines start end buffer =
-    List.range start end
-        |> List.foldr
-            (\idx accum ->
-                case Array.get idx buffer of
-                    Nothing ->
-                        accum
-
-                    Just row ->
-                        viewLine buffer idx row :: accum
-            )
-            []
-        |> H.div []
 
 
 keyedViewLines : Int -> Int -> Array String -> Html Msg
@@ -279,14 +260,14 @@ keyedViewLines start end buffer =
                         accum
 
                     Just row ->
-                        viewKeyedLine buffer idx row :: accum
+                        viewKeyedLine idx row :: accum
             )
             []
         |> Keyed.node "div" []
 
 
-viewLine : Array String -> Int -> String -> Html Msg
-viewLine buffer row content =
+viewLine : Int -> String -> Html Msg
+viewLine row content =
     H.div
         [ HA.class "content-line"
         , HA.style "top" (String.fromFloat (toFloat row * lineHeight) ++ "px")
@@ -294,14 +275,10 @@ viewLine buffer row content =
         [ H.text content ]
 
 
-viewKeyedLine : Array String -> Int -> String -> ( String, Html Msg )
-viewKeyedLine buffer row content =
+viewKeyedLine : Int -> String -> ( String, Html Msg )
+viewKeyedLine row content =
     ( String.fromInt row
-    , H.div
-        [ HA.class "content-line"
-        , HA.style "top" (String.fromFloat (toFloat row * lineHeight) ++ "px")
-        ]
-        [ H.text content ]
+    , Html.Lazy.lazy2 viewLine row content
     )
 
 
@@ -389,14 +366,6 @@ Nullam volutpat consequat metus ac gravida. Curabitur iaculis nibh leo, non laci
 
 
 -- Helpers
-
-
-indexedFoldl : (Int -> String -> b -> b) -> b -> Array String -> b
-indexedFoldl fn accum buffer =
-    Array.foldl (\val ( idx, acc ) -> ( idx + 1, fn idx val acc ))
-        ( 0, accum )
-        buffer
-        |> Tuple.second
 
 
 randomToTask : Generator a -> Task x a
