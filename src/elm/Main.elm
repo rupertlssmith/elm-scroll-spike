@@ -20,10 +20,14 @@ import Task exposing (Task)
 import Time
 
 
-{-| How many lines above and below the visible region also get rendered.
--}
-pad =
-    10
+config =
+    let
+        fontSize =
+            15
+    in
+    { pad = 10
+    , lineHeight = fontSize * 1.4
+    }
 
 
 main : Program () Model Msg
@@ -71,6 +75,8 @@ type Msg
     | RandomBuffer (Array String)
     | ContentViewPort (Result Browser.Dom.Error Viewport)
     | Resize
+    | MoveUp
+    | MoveDown
 
 
 update msg model =
@@ -92,6 +98,9 @@ update msg model =
         Resize ->
             ( model, initEditorSize )
 
+        _ ->
+            ( model, Cmd.none )
+
 
 subscriptions _ =
     Browser.Events.onResize (\_ _ -> Resize)
@@ -99,16 +108,6 @@ subscriptions _ =
 
 
 -- Styling
-
-
-fontSize : Float
-fontSize =
-    15
-
-
-lineHeight : Float
-lineHeight =
-    fontSize * 1.4
 
 
 global : List Css.Global.Snippet
@@ -244,13 +243,13 @@ viewContent model =
     let
         startLine =
             max 0
-                ((model.top / lineHeight |> floor) - pad)
+                ((model.top / config.lineHeight |> floor) - config.pad)
 
         endLine =
-            ((model.top + model.height) / lineHeight |> floor) + pad
+            ((model.top + model.height) / config.lineHeight |> floor) + config.pad
 
         height =
-            (Array.length model.buffer |> toFloat) * lineHeight
+            (Array.length model.buffer |> toFloat) * config.lineHeight
     in
     H.div
         [ HA.id "content-main"
@@ -279,7 +278,7 @@ viewLine : Int -> String -> Html Msg
 viewLine row content =
     H.div
         [ HA.class "content-line"
-        , HA.style "top" (String.fromFloat (toFloat row * lineHeight) ++ "px")
+        , HA.style "top" (String.fromFloat (toFloat row * config.lineHeight) ++ "px")
         ]
         [ H.text content ]
 
@@ -311,6 +310,29 @@ scrollDecoder =
         |> andMap (Decode.at [ "target", "scrollLeft" ] Decode.float)
         |> andMap (Decode.at [ "target", "scrollWidth" ] Decode.float)
         |> Decode.map Scroll
+
+
+
+-- Keyboard events.
+
+
+keyDecoder : Decoder Msg
+keyDecoder =
+    Decode.field "key" Decode.string
+        |> Decode.andThen keyToMsg
+
+
+keyToMsg : String -> Decoder Msg
+keyToMsg string =
+    case string of
+        "ArrowUp" ->
+            Decode.succeed MoveUp
+
+        "ArrowDown" ->
+            Decode.succeed MoveDown
+
+        _ ->
+            Decode.fail "This key does nothing"
 
 
 
