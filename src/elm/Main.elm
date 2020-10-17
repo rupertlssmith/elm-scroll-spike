@@ -3,6 +3,7 @@ module Main exposing (main)
 import Array exposing (Array)
 import Browser exposing (Document)
 import Browser.Dom exposing (Viewport)
+import Browser.Events
 import Css
 import Css.Global
 import Html as H exposing (Attribute, Html)
@@ -63,6 +64,7 @@ type Msg
     = Scroll ScrollEvent
     | RandomBuffer (Array String)
     | ContentViewPort (Result Browser.Dom.Error Viewport)
+    | Resize
 
 
 update msg model =
@@ -81,9 +83,12 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        Resize ->
+            ( model, initEditorSize )
+
 
 subscriptions _ =
-    Sub.none
+    Browser.Events.onResize (\_ _ -> Resize)
 
 
 
