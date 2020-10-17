@@ -20,6 +20,12 @@ import Task exposing (Task)
 import Time
 
 
+{-| How many lines above and below the visible region also get rendered.
+-}
+pad =
+    10
+
+
 main : Program () Model Msg
 main =
     Browser.document
@@ -235,9 +241,6 @@ viewLineNumber n =
 viewContent : Model -> Html Msg
 viewContent model =
     let
-        pad =
-            10
-
         startLine =
             max 0
                 ((model.top / lineHeight |> floor) - pad)
