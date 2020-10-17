@@ -129,6 +129,7 @@ global =
     , Css.Global.id "editor-main-inner"
         [ Css.displayFlex
         , Css.flexDirection Css.row
+        , Css.outline Css.none
         ]
     , Css.Global.class "v-scroll-bar"
         [ Css.position Css.absolute
