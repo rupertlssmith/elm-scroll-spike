@@ -24,9 +24,15 @@ config =
     let
         fontSize =
             15
+
+        lineHeightRatio =
+            1.4
     in
-    { pad = 10
-    , lineHeight = fontSize * 1.4
+    { pad = 1
+    , lineHeight =
+        (lineHeightRatio * fontSize)
+            |> floor
+            |> toFloat
     }
 
 
@@ -65,11 +71,6 @@ init _ =
     )
 
 
-initEditorSize : Cmd Msg
-initEditorSize =
-    Browser.Dom.getViewportOf "editor-main" |> Task.attempt ContentViewPort
-
-
 type Msg
     = Scroll ScrollEvent
     | RandomBuffer (Array String)
@@ -77,6 +78,7 @@ type Msg
     | Resize
     | MoveUp
     | MoveDown
+    | NoOp
 
 
 update msg model =
@@ -85,7 +87,7 @@ update msg model =
             ( { model | buffer = buffer }, Cmd.none )
 
         Scroll scroll ->
-            ( { model | top = scroll.scrollTop }, Cmd.none )
+            ( { model | top = snapToLineHeight config.lineHeight scroll.scrollTop }, Cmd.none )
 
         ContentViewPort result ->
             case result of
@@ -98,12 +100,28 @@ update msg model =
         Resize ->
             ( model, initEditorSize )
 
-        _ ->
+        MoveUp ->
+            ( model, scrollTo (model.top - config.lineHeight) )
+
+        MoveDown ->
+            ( model, scrollTo (model.top + config.lineHeight) )
+
+        NoOp ->
             ( model, Cmd.none )
 
 
 subscriptions _ =
     Browser.Events.onResize (\_ _ -> Resize)
+
+
+initEditorSize : Cmd Msg
+initEditorSize =
+    Browser.Dom.getViewportOf "editor-main" |> Task.attempt ContentViewPort
+
+
+scrollTo : Float -> Cmd Msg
+scrollTo pos =
+    Browser.Dom.setViewportOf "editor-main" 0.0 pos |> Task.attempt (always NoOp)
 
 
 
@@ -195,6 +213,7 @@ editorView model =
     H.div
         [ HA.id "editor-main"
         , HE.on "scroll" scrollDecoder
+        , HE.on "keydown" keyDecoder
         ]
         [ H.div
             [ HA.id "editor-main-inner"
@@ -408,3 +427,13 @@ randomToTask generator =
 andMap : Decoder a -> Decoder (a -> b) -> Decoder b
 andMap =
     Decode.map2 (|>)
+
+
+snapToLineHeight : Float -> Float -> Float
+snapToLineHeight lineHeight pos =
+    ((pos / lineHeight) |> round |> toFloat) * lineHeight
+
+
+snapToLineHeightFromBottom : Float -> Float -> Float -> Float
+snapToLineHeightFromBottom height lineHeight pos =
+    ((pos / lineHeight) |> round |> toFloat) * lineHeight
