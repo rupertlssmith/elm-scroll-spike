@@ -28,7 +28,7 @@ config =
         lineHeightRatio =
             1.4
     in
-    { pad = 1
+    { pad = 10
     , lineHeight =
         (lineHeightRatio * fontSize)
             |> floor
@@ -52,6 +52,7 @@ type alias Model =
     , height : Float
     , cursor : Int
     , bottomOffset : Float
+    , linesPerPage : Int
     }
 
 
@@ -67,6 +68,7 @@ init _ =
       , height = 0
       , cursor = 0
       , bottomOffset = 0.0
+      , linesPerPage = 0
       }
     , Cmd.batch
         [ Task.perform RandomBuffer (randomBuffer 120 10000 |> randomToTask)
@@ -87,6 +89,8 @@ type Msg
     | Resize
     | MoveUp
     | MoveDown
+    | PageUp
+    | PageDown
     | NoOp
 
 
@@ -104,6 +108,7 @@ update msg model =
                     ( { model
                         | height = viewport.viewport.height
                         , bottomOffset = bottomOffset viewport.viewport.height
+                        , linesPerPage = linesPerPage viewport.viewport.height
                       }
                     , Cmd.none
                     )
@@ -132,6 +137,24 @@ update msg model =
             , scrollTo ((cursor |> toFloat) * config.lineHeight - model.bottomOffset)
             )
 
+        PageUp ->
+            let
+                cursor =
+                    model.cursor - model.linesPerPage
+            in
+            ( { model | cursor = cursor }
+            , scrollTo ((cursor |> toFloat) * config.lineHeight)
+            )
+
+        PageDown ->
+            let
+                cursor =
+                    model.cursor + model.linesPerPage
+            in
+            ( { model | cursor = cursor }
+            , scrollTo ((cursor |> toFloat) * config.lineHeight - model.bottomOffset)
+            )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -142,6 +165,11 @@ bottomOffset : Float -> Float
 bottomOffset height =
     height
         - (((height / config.lineHeight) |> floor |> toFloat) * config.lineHeight)
+
+
+linesPerPage : Float -> Int
+linesPerPage height =
+    (height / config.lineHeight) |> floor
 
 
 initEditorSize : Cmd Msg
@@ -379,6 +407,12 @@ keyToMsg string =
 
         "ArrowDown" ->
             Decode.succeed MoveDown
+
+        "PageUp" ->
+            Decode.succeed PageUp
+
+        "PageDown" ->
+            Decode.succeed PageDown
 
         _ ->
             Decode.fail "This key does nothing"
