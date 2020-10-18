@@ -28,7 +28,7 @@ config =
         lineHeightRatio =
             1.4
     in
-    { pad = 10
+    { pad = 30
     , lineHeight =
         (lineHeightRatio * fontSize)
             |> floor
