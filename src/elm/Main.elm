@@ -50,6 +50,8 @@ type alias Model =
     { buffer : Array String
     , top : Float
     , height : Float
+    , cursor : Int
+    , bottomOffset : Float
     }
 
 
@@ -63,6 +65,8 @@ init _ =
     ( { buffer = Array.empty
       , top = 0
       , height = 0
+      , cursor = 0
+      , bottomOffset = 0.0
       }
     , Cmd.batch
         [ Task.perform RandomBuffer (randomBuffer 120 10000 |> randomToTask)
@@ -70,6 +74,10 @@ init _ =
         , Browser.Dom.focus "editor-main" |> Task.attempt (always NoOp)
         ]
     )
+
+
+subscriptions _ =
+    Browser.Events.onResize (\_ _ -> Resize)
 
 
 type Msg
@@ -88,12 +96,17 @@ update msg model =
             ( { model | buffer = buffer }, Cmd.none )
 
         Scroll scroll ->
-            ( { model | top = snapToLineHeight config.lineHeight scroll.scrollTop }, Cmd.none )
+            ( { model | top = scroll.scrollTop }, Cmd.none )
 
         ContentViewPort result ->
             case result of
                 Ok viewport ->
-                    ( { model | height = viewport.viewport.height }, Cmd.none )
+                    ( { model
+                        | height = viewport.viewport.height
+                        , bottomOffset = bottomOffset viewport.viewport.height
+                      }
+                    , Cmd.none
+                    )
 
                 _ ->
                     ( model, Cmd.none )
@@ -102,17 +115,33 @@ update msg model =
             ( model, initEditorSize )
 
         MoveUp ->
-            ( model, scrollTo (model.top - config.lineHeight) )
+            let
+                cursor =
+                    model.cursor - 1
+            in
+            ( { model | cursor = cursor }
+            , scrollTo ((cursor |> toFloat) * config.lineHeight)
+            )
 
         MoveDown ->
-            ( model, scrollTo (model.top + config.lineHeight) )
+            let
+                cursor =
+                    model.cursor + 1
+            in
+            ( { model | cursor = cursor }
+            , scrollTo ((cursor |> toFloat) * config.lineHeight - model.bottomOffset)
+            )
 
         NoOp ->
             ( model, Cmd.none )
 
 
-subscriptions _ =
-    Browser.Events.onResize (\_ _ -> Resize)
+{-| The difference between the height and the height floored to line height.
+-}
+bottomOffset : Float -> Float
+bottomOffset height =
+    height
+        - (((height / config.lineHeight) |> floor |> toFloat) * config.lineHeight)
 
 
 initEditorSize : Cmd Msg
@@ -139,7 +168,7 @@ global =
         [ Css.position Css.relative
         , Css.fontFamily Css.monospace
         , Css.whiteSpace Css.pre
-        , Css.overflowX Css.scroll
+        , Css.overflowX Css.hidden
         , Css.overflowY Css.scroll
         , Css.pct 100 |> Css.width
         , Css.pct 100 |> Css.height
@@ -428,13 +457,3 @@ randomToTask generator =
 andMap : Decoder a -> Decoder (a -> b) -> Decoder b
 andMap =
     Decode.map2 (|>)
-
-
-snapToLineHeight : Float -> Float -> Float
-snapToLineHeight lineHeight pos =
-    ((pos / lineHeight) |> round |> toFloat) * lineHeight
-
-
-snapToLineHeightFromBottom : Float -> Float -> Float -> Float
-snapToLineHeightFromBottom height lineHeight pos =
-    ((pos / lineHeight) |> round |> toFloat) * lineHeight
