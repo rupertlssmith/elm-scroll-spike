@@ -67,6 +67,7 @@ init _ =
     , Cmd.batch
         [ Task.perform RandomBuffer (randomBuffer 120 10000 |> randomToTask)
         , initEditorSize
+        , Browser.Dom.focus "editor-main" |> Task.attempt (always NoOp)
         ]
     )
 
