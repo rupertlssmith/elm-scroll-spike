@@ -28,8 +28,7 @@ config =
         lineHeightRatio =
             1.4
     in
-    { pad = 30
-    , lineHeight =
+    { lineHeight =
         (lineHeightRatio * fontSize)
             |> floor
             |> toFloat
@@ -318,12 +317,16 @@ viewLineNumber n =
 viewContent : Model -> Html Msg
 viewContent model =
     let
+        pad =
+            -- Ensure there is always 1 full page above and below for page up and down.
+            model.linesPerPage + 1
+
         startLine =
             max 0
-                ((model.top / config.lineHeight |> floor) - config.pad)
+                ((model.top / config.lineHeight |> floor) - pad)
 
         endLine =
-            ((model.top + model.height) / config.lineHeight |> floor) + config.pad
+            ((model.top + model.height) / config.lineHeight |> floor) + pad
 
         height =
             (Array.length model.buffer |> toFloat) * config.lineHeight
